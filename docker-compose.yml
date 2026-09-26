@@ -1,3 +1,4 @@
+
 services:
 
   sales-api:
@@ -6,7 +7,7 @@ services:
       dockerfile: docker/api/Dockerfile
     container_name: sales-api
     environment:
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: sales.orders
     ports:
       - "8000:8000"
@@ -37,7 +38,7 @@ services:
       - data-platform
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.1
+    image: confluentinc/cp-zookeeper:7.6.14
     container_name: sales-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -46,7 +47,7 @@ services:
       - data-platform
 
   kafka:
-    image: confluentinc/cp-kafka:7.6.1
+    image: confluentinc/cp-kafka:7.6.14
     container_name: sales-kafka
     depends_on:
       - zookeeper
@@ -55,25 +56,37 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:29092 --list >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "kafka-topics --bootstrap-server localhost:29092 --list >/dev/null 2>&1"
+        ]
       interval: 10s
       timeout: 10s
       retries: 20
+
     networks:
       - data-platform
 
   spark-master:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.7
     container_name: sales-spark-master
-    environment:
-      SPARK_MODE: master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.master.Master
     ports:
       - "8080:8080"
       - "7077:7077"
@@ -81,13 +94,15 @@ services:
       - data-platform
 
   spark-worker:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.7
     container_name: sales-spark-worker
     depends_on:
       - spark-master
+    command: >
+      /opt/spark/bin/spark-class
+      org.apache.spark.deploy.worker.Worker
+      spark://spark-master:7077
     environment:
-      SPARK_MODE: worker
-      SPARK_MASTER_URL: spark://spark-master:7077
       SPARK_WORKER_MEMORY: 2G
       SPARK_WORKER_CORES: 2
     ports:
@@ -107,6 +122,7 @@ services:
         condition: service_healthy
       spark-master:
         condition: service_started
+
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC: sales.orders
@@ -114,11 +130,13 @@ services:
       POSTGRES_DB: sales
       POSTGRES_USER: sales
       POSTGRES_PASSWORD: sales
+
     command: >
       spark-submit
       --master spark://spark-master:7077
-      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.postgresql:postgresql:42.7.3
+      --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.7,org.postgresql:postgresql:42.7.3
       /opt/spark-app/sales_stream.py
+
     networks:
       - data-platform
 
