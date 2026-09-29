@@ -1,4 +1,4 @@
-# TP Master Data Engineering — Real-Time Sales Analytics & DevOps
+# TP Master Data Engineering — MOUME TIMBA WALTER JANNOT
 
 Projet fil rouge : industrialiser une pipeline Big Data de ventes temps réel avec tests, Jenkins et SonarQube.
 
