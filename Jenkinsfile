@@ -114,14 +114,27 @@ pipeline {
         }
 
         stage('SonarQube') {
+            environment {
+                SCANNER_HOME = tool 'sonar-scanner'
+            }
             steps {
-                echo 'TODO: analyse SonarQube (étape suivante du TP).'
+                withSonarQubeEnv('SonarQube') {
+                    // Les variables sont résolues par le shell : le token n'est jamais interpolé par Groovy
+                    sh '''
+                        "$SCANNER_HOME/bin/sonar-scanner" \
+                          -Dsonar.host.url="$SONAR_HOST_URL" \
+                          -Dsonar.token="$SONAR_AUTH_TOKEN"
+                    '''
+                }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                echo 'TODO: waitForQualityGate() (étape suivante du TP).'
+                // Bloque le pipeline si le Quality Gate SonarQube est en échec
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
     }

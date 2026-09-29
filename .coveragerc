@@ -1,0 +1,3 @@
+[run]
+# Chemins relatifs dans coverage.xml : SonarQube retrouve les fichiers du workspace
+relative_files = True
